@@ -15,6 +15,10 @@ sdat <- read.xlsx("attribution_data.xlsx",
   mutate(ID = seq(1:nrow(.)))
 
 # analyse and preprocess
+
+sdat %>% distinct(Orderid) %>% count() # real orders (everything is an order, just every touchpoint is recorded)
+sdat %>% summarise(sum(Position))
+
 # TODO: data preprocessing
 # TODO: data analysis
 
@@ -155,6 +159,119 @@ sdat_fact %>%
 
 ## PART II:
 
+# channel name adjustment for channels
+
+sdat_fact <- sdat_fact %>% 
+  mutate(Channel = ifelse(Groupname == "BUZZ AFFILIATE", "Affiliate Marketing",
+                          ifelse(Groupname == "CJ", "Affiliate Marketing",
+                                 ifelse(Groupname == "CPM", "Display Advertising",
+                                        ifelse(Groupname == "OTHER", "Other",
+                                               ifelse(Groupname == "PRINT - MAGAZINES", "PRINT",
+                                                      ifelse(Groupname == "SEARCH GOOGLE NON-BRAND", "Search Engine",
+                                                             ifelse(Groupname == "SEARCH MSN NON-BRAND", "Search Engine",
+                                                                    ifelse(Groupname == "TV", "TV",
+                                                                           ifelse(Groupname == "Uncategorized", "NA",
+                                                                                  ifelse(Groupname == "DIRECT MAIL", "MAIL",
+                                                                                         ifelse(Groupname == "SEARCH GOOGLE BRAND", "Search Engine",
+                                                                                                ifelse(Groupname == "SEARCH MSN BRAND", "Search Engine",
+                                                                                                       ifelse(Groupname == "SEARCH YAHOO BRAND", "Search Engine",
+                                                                                                              "Social Media Sites"))))))))))))))
 
 
 
+
+
+
+
+# TASK 2.1
+# FIRST CLICK ATTRIBUTION
+
+attribution_results <- sdat_fact %>% 
+  filter(Position == 0) %>% 
+  group_by(Channel) %>% 
+  summarise(first_click_sales = sum(Saleamount)) %>% 
+  arrange(desc(first_click_sales))
+
+# LAST CLICK ATTRIBUTION
+
+attribution_results <- sdat_fact %>% 
+  group_by(Orderid) %>% 
+  arrange(desc(Orderid, Position)) %>%
+  slice(1) %>% 
+  group_by(Channel) %>% 
+  summarise(last_click_sales = sum(Saleamount)) %>% 
+  arrange(desc(last_click_sales)) %>% 
+  left_join(attribution_results)
+
+# EVEN ATTRIBUTION
+
+attribution_results <- sdat_fact %>% 
+  group_by(Orderid) %>% 
+  add_tally() %>% 
+  mutate(rev_share = Saleamount/n) %>% 
+  group_by(Channel) %>% 
+  summarise(even_attribution_sales = sum(rev_share)) %>% 
+  arrange(desc(even_attribution_sales)) %>% 
+  left_join(attribution_results)
+
+attribution_results %>% 
+  pivot_longer(cols = c(even_attribution_sales, last_click_sales, first_click_sales),
+               names_to = "attribution",
+               values_to = "value") %>% 
+  ggplot(aes(Channel, value)) +
+  geom_col() +
+  facet_wrap(~attribution, nrow = 3)
+
+# TODO: fix y axis
+# TODO: flip and make benchmarks easier
+# TODO: add legend, title, etc.
+
+# TASK 2.2
+
+# TASK 2.3
+
+# TASK 2.4
+
+# TASK 2.1
+# FIRST CLICK ATTRIBUTION
+
+attribution_results_nc <- sdat_fact %>% 
+  filter(Position == 0) %>% 
+  group_by(Channel, Newcustomer) %>% 
+  summarise(first_click_sales = sum(Saleamount)) %>% 
+  arrange(desc(first_click_sales))
+
+# LAST CLICK ATTRIBUTION
+
+attribution_results_nc <- sdat_fact %>% 
+  group_by(Orderid) %>% 
+  arrange(desc(Orderid, Position)) %>%
+  slice(1) %>% 
+  group_by(Channel, Newcustomer) %>% 
+  summarise(last_click_sales = sum(Saleamount)) %>% 
+  arrange(desc(last_click_sales)) %>% 
+  left_join(attribution_results_nc)
+
+# EVEN ATTRIBUTION
+
+attribution_results_nc <- sdat_fact %>% 
+  group_by(Orderid) %>% 
+  add_tally() %>% 
+  mutate(rev_share = Saleamount/n) %>% 
+  group_by(Channel, Newcustomer) %>% 
+  summarise(even_attribution_sales = sum(rev_share)) %>% 
+  arrange(desc(even_attribution_sales)) %>% 
+  left_join(attribution_results_nc)
+
+attribution_results_nc %>% 
+  pivot_longer(cols = c(even_attribution_sales, last_click_sales, first_click_sales),
+               names_to = "attribution",
+               values_to = "value") %>% 
+  ggplot(aes(Channel, value)) +
+  geom_col() +
+  facet_wrap(~attribution + Newcustomer, nrow = 3)
+
+
+
+
+            
