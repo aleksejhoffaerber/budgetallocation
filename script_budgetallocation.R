@@ -1,4 +1,4 @@
-# libraries 
+# LIBRARIES 
 library(xlsx) # excel import
 library(dplyr) # data data preprocessing and data wrangling
 library(corrr) # simple correlation analysis
@@ -8,46 +8,126 @@ library(patchwork) # side-by-side plotting
 library(lubridate) # advanced date operations
 library(tidyverse) # advanced data wrangling
 
-# load the data 
+# LOADING THE DATA -----
 sdat <- read.xlsx("attribution_data.xlsx", 
                   sheetIndex = 1, 
                   as.data.frame = T) %>% 
   mutate(ID = seq(1:nrow(.)))
 
-# analyse and preprocess
+# VARIABLE TRANSFORMATIONS ----
+# introduce new channel variables
+sdat <- sdat %>% 
+  mutate(Channel = ifelse(Groupname == "BUZZ AFFILIATE", "Affiliate Marketing",
+                          ifelse(Groupname == "CJ", "Affiliate Marketing",
+                                 ifelse(Groupname == "CPM", "Display Advertising",
+                                        ifelse(Groupname == "OTHER" | Groupname == "PRINT - MAGAZINES" |
+                                                 Groupname == "TV" | Groupname == "DIRECT MAIL", "Other",
+                                               ifelse(Groupname == "SEARCH GOOGLE NON-BRAND", "Search Engine",
+                                                      ifelse(Groupname == "SEARCH MSN NON-BRAND", "Search Engine",
+                                                             ifelse(Groupname == "Uncategorized", "NA",
+                                                                    ifelse(Groupname == "SEARCH GOOGLE BRAND", "Search Engine",
+                                                                           ifelse(Groupname == "SEARCH MSN BRAND", "Search Engine",
+                                                                                  ifelse(Groupname == "SEARCH YAHOO BRAND", "Search Engine",
+                                                                                         "Social Media Sites")))))))))))
 
-sdat %>% distinct(Orderid) %>% count() # real orders (everything is an order, just every touchpoint is recorded)
-sdat %>% summarise(sum(Position))
 
-# TODO: data preprocessing
-# TODO: data analysis
-
-# do not change to factor, because it changes the data
+# change to factors
 sdat_fact <- sdat %>% 
   mutate(Newcustomer = as.factor(Newcustomer),
          Groupname = as.factor(Groupname),
          Brand = as.factor(Brand),
-         Positionname = as.factor(Positionname)) 
+         Positionname = as.factor(Positionname),
+         Channel = as.factor(Channel),
+         TimeToConvert = difftime(Orderdatetime, Positiondatetime, unit = "hours"),
+         TimeToConvert = as.numeric(TimeToConvert)) %>% 
+  select(Orderid, Saleamount, Position, TimeToConvert, Channel, Groupname, Positionname, Newcustomer)
   
 
-# TASK 1.1
+
+# PREPROCESSING -----
+# TODO: needs to be mentioned in the beginning because later posiion and channel analyses will be wrong because no attribution assumptions
+
+
+# real orders (everything is an order, just every touchpoint is recorded)
+sdat %>% distinct(Orderid) %>% count() 
+
+# sales per order
+sdat %>% group_by(Newcustomer, Orderid) %>% 
+  summarise(sales = mean(Saleamount)) %>% 
+  summarise(total_sales = sum(sales))
+
+# distribution analysis, right tail revenue distribution seems normal
+sdat %>% 
+  pivot_longer(cols = c(Saleamount, Position),
+               names_to = "variables",
+               values_to = "values") %>% 
+  ggplot(aes(values)) +
+  stat_density() +
+  facet_wrap(~variables, scales = "free", ncol = 1)
+
+# relationship analysis
 sdat_fact %>% 
-  group_by(Positionname, Groupname) %>% 
+  ggplot(aes(TimeToConvert, Saleamount)) +
+  geom_point(alpha = 0.1) +
+  geom_smooth(group = 1) +
+  facet_wrap(~Channel + Newcustomer, ncol = 2) +
+  theme_bw()
+
+# relationship of position classes and actual positions
+sdat_fact %>% 
+  ggplot(aes(Position)) +
+  stat_density() +
+  facet_wrap(~Positionname)
+
+# positions classification analysis
+sdat_fact %>% 
+  group_by(Newcustomer, Positionname) %>% 
+  count() %>% 
+  ggplot(aes(Positionname, n)) +
+  geom_col() +
+  facet_wrap(~Newcustomer)
+  
+
+
+# TASK 1.1 ------
+# old form including all channel
+# sdat_fact %>% 
+#   group_by(Positionname, Groupname) %>% 
+#   count() %>% 
+#   arrange(desc(n)) %>% 
+#   ungroup() %>% 
+#   ggplot(aes(Positionname, n, fill = Positionname), colour = "white") +
+#   geom_bar(stat = "identity") +
+#   geom_label(aes(label = n), vjust = -0.3) +
+#   facet_wrap(~Groupname, nrow = 3) +
+#   coord_cartesian(ylim = c(0,3500)) +
+#   labs(x = "Position",
+#        y = "Channel Touchpoints",
+#        title = "Touchpoints per Channel and Position",
+#        caption = "Source: W.M. Winters, May to June 2012") +
+#   theme_bw() +
+#   theme(axis.text.x = element_text(angle = 90),
+#         strip.text.x = element_text(size = 5))
+
+# same graph but with channel classifications (more Overview)
+sdat_fact %>% 
+  group_by(Positionname, Channel) %>% 
   count() %>% 
   arrange(desc(n)) %>% 
   ungroup() %>% 
   ggplot(aes(Positionname, n, fill = Positionname), colour = "white") +
   geom_bar(stat = "identity") +
   geom_label(aes(label = n), vjust = -0.3) +
-  facet_wrap(~Groupname, nrow = 3) +
+  facet_wrap(~Channel, nrow = 3) +
   coord_cartesian(ylim = c(0,3500)) +
   labs(x = "Position",
        y = "Channel Touchpoints",
        title = "Touchpoints per Channel and Position",
+       subtitle = "Search Engines provide strong support for initial clicks, \nAffiliate Marketing serves a strong role in converting \nDisplay Advertisements are also strong in click assistance and conversion",
        caption = "Source: W.M. Winters, May to June 2012") +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 90),
-        strip.text.x = element_text(size = 5))
+        strip.text.x = element_text(size = 8))
 
 ggsave("01_1.1_Tocuhpoints per Channel and Position.png", width = 8, height = 6)
 
@@ -57,38 +137,40 @@ ggsave("01_1.1_Tocuhpoints per Channel and Position.png", width = 8, height = 6)
 
 
 # TASK 1.2
-# add difftime into df
-
-sdat_fact <- sdat_fact %>% 
-  mutate(TimeToConvert = difftime(Orderdatetime, Positiondatetime, unit = "days"))
-
-# difftime
-
 # TODO. adjust data model
-sdat_fact %>% 
+c1 <- sdat_fact %>% 
   filter(Positionname == "ORIGINATOR" | Positionname == "CONVERTER") %>% 
-  mutate(TimeToConvert = difftime(Orderdatetime, Positiondatetime, unit = "days")) %>% 
   ggplot(aes(TimeToConvert)) +
   geom_histogram() +
-  facet_wrap(~Positionname, nrow = 2)
+  facet_wrap(~Positionname, nrow = 2) +
+  labs(x = "Time for Conversion [in hours]",
+       y = "Count",
+       title = "Conversion Time across Interval",
+       caption = "Source: W.M. Winters, May to June 2012") +
+  theme_bw()
 
 # additionally split per hour
-sdat_fact %>% 
+c2 <- sdat_fact %>% 
   filter(Positionname == "ORIGINATOR" | Positionname == "CONVERTER") %>% 
-  mutate(TimeToConvert = difftime(Orderdatetime, Positiondatetime, unit = "hours")) %>% 
   filter(TimeToConvert <= 24) %>% 
   ggplot(aes(TimeToConvert)) +
   geom_histogram() +
-  facet_wrap(~Positionname, nrow = 2)
+  facet_wrap(~Positionname, nrow = 2) +
+  labs(x = "Time for Conversion [in first 24 hours]",
+       y = "Count",
+       title = "Close-Up Look for Conversions within first 24 hours",
+       caption = "Source: W.M. Winters, May to June 2012") +
+  theme_bw() 
+
+c1 + c2
 
 # amount of sales
 sdat_fact %>% 
   filter(Positionname == "ORIGINATOR"| Positionname == "CONVERTER") %>% 
-  mutate(TimeToConvert = difftime(Orderdatetime, Positiondatetime, unit = "days")) %>% 
-  group_by(Positionname, Groupname) %>% 
+  group_by(Positionname, Channel) %>% 
   summarise(sum_sales = sum(Saleamount)) %>% 
   arrange(desc(sum_sales)) %>% 
-  ggplot(aes(Groupname, sum_sales)) +
+  ggplot(aes(Channel, sum_sales)) +
   geom_col() +
   facet_wrap(~Positionname, nrow = 2) +
   labs(x = "Channel",
@@ -97,7 +179,7 @@ sdat_fact %>%
        caption = "Source: W.M. Winters, May to June 2012") +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 90),
-        strip.text.x = element_text(size = 5))
+        strip.text.x = element_text(size = 8))
 
 
 
@@ -161,21 +243,6 @@ sdat_fact %>%
 
 # channel name adjustment for channels
 
-sdat_fact <- sdat_fact %>% 
-  mutate(Channel = ifelse(Groupname == "BUZZ AFFILIATE", "Affiliate Marketing",
-                          ifelse(Groupname == "CJ", "Affiliate Marketing",
-                                 ifelse(Groupname == "CPM", "Display Advertising",
-                                        ifelse(Groupname == "OTHER", "Other",
-                                               ifelse(Groupname == "PRINT - MAGAZINES", "PRINT",
-                                                      ifelse(Groupname == "SEARCH GOOGLE NON-BRAND", "Search Engine",
-                                                             ifelse(Groupname == "SEARCH MSN NON-BRAND", "Search Engine",
-                                                                    ifelse(Groupname == "TV", "TV",
-                                                                           ifelse(Groupname == "Uncategorized", "NA",
-                                                                                  ifelse(Groupname == "DIRECT MAIL", "MAIL",
-                                                                                         ifelse(Groupname == "SEARCH GOOGLE BRAND", "Search Engine",
-                                                                                                ifelse(Groupname == "SEARCH MSN BRAND", "Search Engine",
-                                                                                                       ifelse(Groupname == "SEARCH YAHOO BRAND", "Search Engine",
-                                                                                                              "Social Media Sites"))))))))))))))
 
 
 
@@ -228,11 +295,31 @@ attribution_results %>%
 
 # TASK 2.2
 
-# TASK 2.3
+# TASK 2.3: DEVELOP YOUR OWN ATTRIBUTION MODEL
+
+# regression ideas (skipped, does not work)
+to_model <- sdat_fact %>% 
+  select(Saleamount, Newcustomer, Position, Channel, TimeToConvert, Positionname)
+
+m1 <- glm(Saleamount ~ ., data = to_model)
+
+# position based attribution
+sdat_fact %>% 
+  group_by(Orderid) %>% 
+  add_tally() %>% 
+  mutate(Position = Position + 1,
+         share = ifelse(Position == 1, 0.4,
+                        ifelse(Position == n, 0.4, 0.2/(n-2))),
+         rev_share = Saleamount * share) %>% 
+  
+  group_by(Channel) %>% 
+  summarise(position_based_attribution = sum(rev_share)) %>% 
+  arrange(desc(position_based_attribution)) %>% 
+  ggplot(aes(Channel, position_based_attribution)) +
+  geom_col()
 
 # TASK 2.4
-
-# TASK 2.1
+# Same analysis as before split by type of customer
 # FIRST CLICK ATTRIBUTION
 
 attribution_results_nc <- sdat_fact %>% 
@@ -271,7 +358,22 @@ attribution_results_nc %>%
   geom_col() +
   facet_wrap(~attribution + Newcustomer, nrow = 3)
 
-
+# position based attribution ----
+sdat_fact %>% 
+  group_by(Orderid) %>% 
+  add_tally() %>% 
+  mutate(Position = Position + 1,
+         share = ifelse(Position == 1, 0.4,
+                        ifelse(Position == n, 0.4, 0.2/(n-2))),
+         rev_share = Saleamount * share) %>% 
+  
+  group_by(Channel, Newcustomer) %>% 
+  summarise(position_based_attribution = sum(rev_share)) %>% 
+  arrange(desc(position_based_attribution)) %>% 
+  ggplot(aes(Channel, position_based_attribution)) +
+  geom_col() +
+  facet_wrap(~Newcustomer)
+# weighting is different
 
 
             
