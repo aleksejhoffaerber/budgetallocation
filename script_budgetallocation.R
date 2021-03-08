@@ -68,17 +68,34 @@ sdat_fact %>%
   geom_histogram() +
   facet_wrap(~Positionname, nrow = 2)
 
-# TODO: Zoom in into first days
-# TODO: what unit makes the most sense?
-# TODO: hsit too narrow, more seperation in first 3 categories needed
+# additionally split per hour
+sdat_fact %>% 
+  filter(Positionname == "ORIGINATOR" | Positionname == "CONVERTER") %>% 
+  mutate(TimeToConvert = difftime(Orderdatetime, Positiondatetime, unit = "hours")) %>% 
+  filter(TimeToConvert <= 24) %>% 
+  ggplot(aes(TimeToConvert)) +
+  geom_histogram() +
+  facet_wrap(~Positionname, nrow = 2)
 
 # amount of sales
 sdat_fact %>% 
-  filter(Positionname == "ORIGINATOR" | Positionname == "CONVERTER") %>% 
+  filter(Positionname == "ORIGINATOR"| Positionname == "CONVERTER") %>% 
   mutate(TimeToConvert = difftime(Orderdatetime, Positiondatetime, unit = "days")) %>% 
-  ggplot(aes(Saleamount)) +
-  geom_histogram() +
-  facet_wrap(~Positionname, nrow = 2)
+  group_by(Positionname, Groupname) %>% 
+  summarise(sum_sales = sum(Saleamount)) %>% 
+  arrange(desc(sum_sales)) %>% 
+  ggplot(aes(Groupname, sum_sales)) +
+  geom_col() +
+  facet_wrap(~Positionname, nrow = 2) +
+  labs(x = "Channel",
+       y = "Aggregated Sales",
+       title = "Sales across different Channels and Positions",
+       caption = "Source: W.M. Winters, May to June 2012") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90),
+        strip.text.x = element_text(size = 5))
+
+
 
 # TASK 1.3
 # conversion times
@@ -112,7 +129,32 @@ sdat_fact %>%
   theme(axis.text.x = element_text(angle = 90),
         strip.text.x = element_text(size = 8))
 
+# TODO: compute actual percentages
 # TODO: change caption of facet wrap
+
+# different channels as CONVERTER
+
+sdat_fact %>% 
+  filter(Positionname == "CONVERTER") %>% 
+  group_by(Newcustomer, Groupname) %>% 
+  count() %>% 
+  ggplot(aes(Groupname, n)) +
+  geom_bar(stat = "identity") +
+  geom_label(aes(label = n), vjust = -0.5) +
+  facet_wrap(~Newcustomer, nrow = 2) +
+  coord_cartesian(ylim = c(0,600)) +
+  labs(x = "Channel",
+       y = "Number of Touchpoints",
+       title = "Touchpoints per Channel, split by New and Old Customers",
+       subtitle = "Considerable more New Customers converted via CPM and Google Search - despite the difference in group affiliation",
+       caption = "Source: W.M. Winters, May to June 2012") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90),
+        strip.text.x = element_text(size = 8))
+
+
+## PART II:
+
 
 
 
