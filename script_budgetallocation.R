@@ -16,6 +16,8 @@ sdat <- read.xlsx("attribution_data.xlsx",
 
 # VARIABLE TRANSFORMATIONS ----
 # introduce new channel variables
+
+# TODO: Uncategorized as "Other" ??
 sdat <- sdat %>% 
   mutate(Channel = case_when(Groupname == "BUZZ AFFILIATE" ~ "Affiliate Marketing",
                              Groupname == "CJ" ~ "Affiliate Marketing",
@@ -38,6 +40,7 @@ sdat_fact <- sdat %>%
          Brand = as.factor(Brand),
          Positionname = as.factor(Positionname),
          Channel = as.factor(Channel),
+         Position = as.factor(Position),
          TimeToConvert = difftime(Orderdatetime, Positiondatetime, unit = "hours"),
          TimeToConvert = as.numeric(TimeToConvert)) %>% 
   select(Orderid, Saleamount, Position, TimeToConvert, Channel, Groupname, Positionname, Newcustomer)
@@ -99,10 +102,6 @@ sdat_fact %>%
   geom_col() +
   facet_wrap(~Newcustomer)
   
-sdat_fact %>% 
-  ggplot(aes(Position, Positionname, fill = Positionname)) +
-  geom_violin() +
-  facet_wrap(~Newcustomer)
 
 # TASK 1.1 ------
 # old form including all channel
@@ -192,7 +191,7 @@ sdat_fact %>%
   group_by(Positionname, Channel) %>% 
   summarise(sum_sales = sum(Saleamount)) %>% 
   arrange(desc(sum_sales)) %>% 
-  ggplot(aes(Channel, sum_sales)) +
+  ggplot(aes(Channel, sum_sales, fill = Channel)) +
   geom_col() +
   facet_wrap(~Positionname, nrow = 2) +
   labs(x = "Channel",
@@ -200,17 +199,47 @@ sdat_fact %>%
        title = "Sales across different Channels and Positions",
        caption = "Source: W.M. Winters, May to June 2012") +
   theme_bw() +
-  theme(axis.text.x = element_text(angle = 90),
-        strip.text.x = element_text(size = 8))
-
+  # theme(axis.text.x = element_text(angle = 90),
+  #       strip.text.x = element_text(size = 8)) +
+  theme(axis.text.x = element_blank(),
+        legend.position = "bottom", legend.box = "horizontal") +
+  scale_color_discrete(NULL) + 
+  guides(colour = guide_legend(nrow = 1))
 
 
 # TASK 1.3
 # conversion times
 
-sdat_fact %>% 
+mean_conversion_time <- sdat_fact %>% 
   group_by(Newcustomer) %>% 
   summarise(mean_conversion_time = mean(TimeToConvert))
+
+# conversion time comparison
+sdat_fact %>% 
+  ggplot(aes(Position, TimeToConvert, fill = Newcustomer)) +
+  geom_boxplot(outlier.alpha = .1) +
+  
+  geom_hline(yintercept = mean_conversion_time[[2,"mean_conversion_time"]], 
+             linetype = "dashed", colour = "#00BFC4", size = 1) +
+  annotate(geom = "label", x = 9.5, y = mean_conversion_time[[2,"mean_conversion_time"]] + 200, 
+           label = round(mean_conversion_time[[2,"mean_conversion_time"]],1), colour = "#00BFC4") +
+  
+  geom_hline(yintercept = mean_conversion_time[[1,"mean_conversion_time"]], 
+             linetype = "dashed", colour = "#F8766D", size = 1) +
+  annotate(geom = "label", x = 9.5, y = mean_conversion_time[[1,"mean_conversion_time"]] + 200, 
+           label = round(mean_conversion_time[[1,"mean_conversion_time"]],1), colour = "#F8766D") +
+  
+  facet_wrap(~Newcustomer) +
+  labs(x = "Position",
+       y = "Time to Convert [in hours]",
+       title = "Difference in Conversion Times by Customer Type",
+       subtitle = "New Customers show significantly faster conversion times across all positions",
+       caption = "Source: W.M. Winters, May to June 2012") +
+  theme_bw() +
+  theme(legend.position = "bottom", legend.box = "horizontal") +
+  scale_color_discrete(NULL) + 
+  guides(colour = guide_legend(nrow = 1))
+
 
 # spending behavior
 
@@ -331,6 +360,8 @@ sdat_fact %>%
   facet_wrap(~Channel) *+
   theme_bw()
 
+
+# FIXME: For what? Title etc.
 sdat_fact %>% 
   group_by(Orderid) %>% 
   add_tally() %>% 
