@@ -220,6 +220,10 @@ mean_conversion_time <- sdat_fact %>%
   group_by(Newcustomer) %>% 
   summarise(mean_conversion_time = mean(TimeToConvert))
 
+sdat_fact %>% 
+  group_by(Newcustomer, Channel) %>% 
+  summarise(mean_conversion_time = mean(TimeToConvert))
+
 # conversion time comparison
 sdat_fact %>% 
   ggplot(aes(Position, TimeToConvert, fill = Newcustomer)) +
@@ -272,6 +276,11 @@ sdat_fact %>%
 mean_spending <- sdat_fact %>% 
   group_by(Newcustomer) %>% 
   summarise(mean_spending = mean(Saleamount))
+
+sdat_fact %>% 
+  group_by(Newcustomer, Channel) %>% 
+  summarise(mean_conversion_time = mean(Saleamount))
+
 
 # spending  comparison
 sdat_fact %>% 
@@ -354,15 +363,6 @@ ggsave("01_1.3_New Customer Converters.png", width = 8, height = 6, dpi = 600)
 
 
 ## PART II: -----
-
-# channel name adjustment for channels
-
-
-
-
-
-
-
 
 # TASK 2.1
 # FIRST CLICK ATTRIBUTION
