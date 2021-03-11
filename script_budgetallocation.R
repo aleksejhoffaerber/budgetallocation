@@ -51,6 +51,18 @@ sdat_fact <- sdat %>%
 # real orders (everything is an order, just every touchpoint is recorded)
 sdat %>% distinct(Orderid) %>% count() 
 
+# there is never an order with only one touchpoint
+sdat_fact %>% 
+  group_by(Orderid) %>% 
+  count() %>%
+  ggplot(aes(n)) +
+  stat_density() +
+  labs(title = "Number of Positions per Actual Order",
+       subtitle = "No order was finished with only one touchpoint",
+       x = "Number of Touchpoints",
+       y = "Density") +
+  theme_bw()
+
 # sales per order
 sdat %>% group_by(Newcustomer, Orderid) %>% 
   summarise(sales = mean(Saleamount)) %>% 
