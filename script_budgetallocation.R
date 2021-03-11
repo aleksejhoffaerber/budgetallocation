@@ -17,18 +17,18 @@ sdat <- read.xlsx("attribution_data.xlsx",
 # VARIABLE TRANSFORMATIONS ----
 # introduce new channel variables
 sdat <- sdat %>% 
-  mutate(Channel = ifelse(Groupname == "BUZZ AFFILIATE", "Affiliate Marketing",
-                          ifelse(Groupname == "CJ", "Affiliate Marketing",
-                                 ifelse(Groupname == "CPM", "Display Advertising",
-                                        ifelse(Groupname == "OTHER" | Groupname == "PRINT - MAGAZINES" |
-                                                 Groupname == "TV" | Groupname == "DIRECT MAIL", "Other",
-                                               ifelse(Groupname == "SEARCH GOOGLE NON-BRAND", "Search Engine",
-                                                      ifelse(Groupname == "SEARCH MSN NON-BRAND", "Search Engine",
-                                                             ifelse(Groupname == "Uncategorized", "NA",
-                                                                    ifelse(Groupname == "SEARCH GOOGLE BRAND", "Search Engine",
-                                                                           ifelse(Groupname == "SEARCH MSN BRAND", "Search Engine",
-                                                                                  ifelse(Groupname == "SEARCH YAHOO BRAND", "Search Engine",
-                                                                                         "Social Media Sites")))))))))))
+  mutate(Channel = case_when(Groupname == "BUZZ AFFILIATE" ~ "Affiliate Marketing",
+                             Groupname == "CJ" ~ "Affiliate Marketing",
+                             Groupname == "CPM" ~ "Display Advertising",
+                             Groupname == "SEARCH GOOGLE NON-BRAND" ~ "Search Engine",
+                             Groupname == "SEARCH MSN NON-BRAND" ~ "Search Engine",
+                             Groupname == "SEARCH GOOGLE BRAND" ~ "Search Engine",
+                             Groupname == "SEARCH MSN BRAND" ~ "Search Engine",
+                             Groupname == "SEARCH YAHOO BRAND" ~ "Search Engine",
+                             Groupname == "SOCIAL" ~ "Social Media Sites",
+                             Groupname == "Uncategorized" ~ "Uncategorized",
+                             Groupname == "OTHER" | Groupname == "PRINT - MAGAZINES" |
+                               Groupname == "TV" | Groupname == "DIRECT MAIL"~ "Other"))
 
 
 # change to factors
@@ -87,29 +87,38 @@ sdat_fact %>%
   geom_col() +
   facet_wrap(~Newcustomer)
   
-
+sdat_fact %>% 
+  ggplot(aes(Position, Positionname, fill = Positionname)) +
+  geom_violin() +
+  facet_wrap(~Newcustomer)
 
 # TASK 1.1 ------
 # old form including all channel
-# sdat_fact %>% 
-#   group_by(Positionname, Groupname) %>% 
-#   count() %>% 
-#   arrange(desc(n)) %>% 
-#   ungroup() %>% 
-#   ggplot(aes(Positionname, n, fill = Positionname), colour = "white") +
-#   geom_bar(stat = "identity") +
-#   geom_label(aes(label = n), vjust = -0.3) +
-#   facet_wrap(~Groupname, nrow = 3) +
-#   coord_cartesian(ylim = c(0,3500)) +
-#   labs(x = "Position",
-#        y = "Channel Touchpoints",
-#        title = "Touchpoints per Channel and Position",
-#        caption = "Source: W.M. Winters, May to June 2012") +
-#   theme_bw() +
-#   theme(axis.text.x = element_text(angle = 90),
-#         strip.text.x = element_text(size = 5))
+sdat_fact %>%
+  group_by(Positionname, Groupname) %>%
+  count() %>%
+  arrange(desc(n)) %>%
+  ungroup() %>%
+  ggplot(aes(Positionname, n, fill = Positionname), colour = "white") +
+  geom_bar(stat = "identity") +
+  geom_label(aes(label = n), vjust = -0.3) +
+  facet_wrap(~Groupname, nrow = 3) +
+  coord_cartesian(ylim = c(0,3500)) +
+  labs(x = "Position",
+       y = "Channel Touchpoints",
+       title = "Touchpoints per Channel and Position",
+       caption = "Source: W.M. Winters, May to June 2012") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90),
+        strip.text.x = element_text(size = 5))
 
 # same graph but with channel classifications (more Overview)
+
+# TODO: size of labels,
+# TODO: size of facets
+# TODO. legend down
+# TODO: delete x axis labels
+
 sdat_fact %>% 
   group_by(Positionname, Channel) %>% 
   count() %>% 
@@ -131,13 +140,14 @@ sdat_fact %>%
 
 ggsave("01_1.1_Tocuhpoints per Channel and Position.png", width = 8, height = 6)
 
-# TODO: size of labels,
-# TODO: size of facets
-# TODO. legend down
+
 
 
 # TASK 1.2
 # TODO. adjust data model
+# TODO: different colors for close-up
+
+
 c1 <- sdat_fact %>% 
   filter(Positionname == "ORIGINATOR" | Positionname == "CONVERTER") %>% 
   ggplot(aes(TimeToConvert)) +
@@ -289,9 +299,42 @@ attribution_results %>%
   geom_col() +
   facet_wrap(~attribution, nrow = 3)
 
+
 # TODO: fix y axis
 # TODO: flip and make benchmarks easier
 # TODO: add legend, title, etc.
+
+
+# CASE FOR EVEN ATTRIBUTION MODEL
+# check relationship between revenue and channel
+
+sdat_fact %>% 
+  group_by(Orderid) %>% 
+  add_tally() %>% 
+  mutate(rev_share = Saleamount/n) %>% 
+  group_by(Channel) %>% 
+  ggplot(aes(Position, rev_share, colour = Channel)) +
+  geom_point(alpha = .1) +
+  geom_smooth() +
+  facet_wrap(~Channel) *+
+  theme_bw()
+
+sdat_fact %>% 
+  group_by(Orderid) %>% 
+  add_tally() %>% 
+  mutate(rev_share = Saleamount/n) %>% 
+  group_by(Channel) %>% 
+  ggplot(aes(rev_share, Position, fill = Channel)) +
+  geom_violin() +
+  # labs(title = "",
+  #      subtitle = "Low") +
+  facet_wrap(~Channel) +
+  theme_bw() +
+  
+  theme(legend.position = "bottom", legend.box = "horizontal") +
+  scale_color_discrete(NULL) + 
+  guides(colour = guide_legend(nrow = 1))
+
 
 # TASK 2.2
 
