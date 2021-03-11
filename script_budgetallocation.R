@@ -149,7 +149,7 @@ sdat_fact %>%
   theme(axis.text.x = element_text(angle = 90),
         strip.text.x = element_text(size = 8))
 
-ggsave("01_1.1_Tocuhpoints per Channel and Position.png", width = 8, height = 6)
+ggsave("01_1.1_Touchpoints per Channel and Position.png", width = 8, height = 6)
 
 
 
@@ -185,6 +185,9 @@ c2 <- sdat_fact %>%
 
 c1 + c2
 
+ggsave("01_1.2_Conversion Time Differences.png", width = 8, height = 6, dpi = 600)
+
+
 # amount of sales
 sdat_fact %>% 
   filter(Positionname == "ORIGINATOR"| Positionname == "CONVERTER") %>% 
@@ -205,6 +208,9 @@ sdat_fact %>%
         legend.position = "bottom", legend.box = "horizontal") +
   scale_color_discrete(NULL) + 
   guides(colour = guide_legend(nrow = 1))
+
+ggsave("01_1.2_Sales across different Channels and Positions.png", width = 8, height = 6, dpi = 600)
+
 
 
 # TASK 1.3
@@ -229,7 +235,7 @@ sdat_fact %>%
   annotate(geom = "label", x = 9.5, y = mean_conversion_time[[1,"mean_conversion_time"]] + 200, 
            label = round(mean_conversion_time[[1,"mean_conversion_time"]],1), colour = "#F8766D") +
   
-  facet_wrap(~ Channel + Newcustomer) +
+  facet_wrap(~ Newcustomer) +
   labs(x = "Position",
        y = "Time to Convert [in hours]",
        title = "Difference in Conversion Times by Customer Type",
@@ -239,6 +245,9 @@ sdat_fact %>%
   theme(legend.position = "bottom", legend.box = "horizontal") +
   scale_color_discrete(NULL) + 
   guides(colour = guide_legend(nrow = 1))
+
+ggsave("01_1.3_Difference in Conversion Times by Customer Type.png", width = 8, height = 6, dpi = 600)
+
 
 
 # APPENDIX additional difference by channel
@@ -260,54 +269,91 @@ sdat_fact %>%
 
 # spending behavior
 
-sdat_fact %>% 
+mean_spending <- sdat_fact %>% 
   group_by(Newcustomer) %>% 
-  summarise(mean_spend = mean(Saleamount))
+  summarise(mean_spending = mean(Saleamount))
+
+# spending  comparison
+sdat_fact %>% 
+  ggplot(aes(Position, Saleamount, fill = Newcustomer)) +
+  geom_boxplot(outlier.alpha = .1) +
+  
+  geom_hline(yintercept = mean_spending[[2,"mean_spending"]],
+             linetype = "dashed", colour = "#00BFC4", size = 1) +
+  annotate(geom = "label", x = 9.5, y = mean_spending[[2,"mean_spending"]] + 100,
+           label = round(mean_spending[[2,"mean_spending"]],1), colour = "#00BFC4") +
+
+  geom_hline(yintercept = mean_spending[[1,"mean_spending"]],
+             linetype = "dashed", colour = "#F8766D", size = 1) +
+  annotate(geom = "label", x = 9.5, y = mean_spending[[1,"mean_spending"]] - 100,
+           label = round(mean_spending[[1,"mean_spending"]],1), colour = "#F8766D") +
+  
+  facet_wrap(~ Newcustomer) +
+  labs(x = "Position",
+       y = "Sales",
+       title = "Difference in Sales by Customer Type and Channel",
+       subtitle = "New Customers show significantly higher sales across all positions",
+       caption = "Source: W.M. Winters, May to June 2012") +
+  theme_bw() +
+  theme(legend.position = "bottom", legend.box = "horizontal") +
+  scale_color_discrete(NULL) + 
+  guides(colour = guide_legend(nrow = 1))
+
+ggsave("01_1.3_Difference in Sales by Customer Type and Channel.png", width = 8, height = 6, dpi = 600)
+
+
 
 # different channels as ORIGINATOR
 sdat_fact %>% 
   filter(Positionname == "ORIGINATOR") %>% 
-  group_by(Newcustomer, Groupname) %>% 
+  group_by(Newcustomer, Channel) %>% 
   count() %>% 
-  ggplot(aes(Groupname, n)) +
+  ggplot(aes(Channel, n, fill = Channel)) +
   geom_bar(stat = "identity") +
   geom_label(aes(label = n), vjust = -0.5) +
   facet_wrap(~Newcustomer, nrow = 2) +
-  coord_cartesian(ylim = c(0,600)) +
+  coord_cartesian(ylim = c(0,650)) +
   labs(x = "Channel",
        y = "Number of Touchpoints",
-       title = "Touchpoints per Channel, split by New and Old Customers",
-       subtitle = "Considerable more New Customers converted via CPM and Google Search - despite the difference in group affiliation",
+       title = "Deep-Dive Originators | Touchpoints per Channel, split by New and Old Customers",
+       subtitle = "More New Customers originated from Display Advertising, Search Engines and Affilitate Marketing",
        caption = "Source: W.M. Winters, May to June 2012") +
   theme_bw() +
-  theme(axis.text.x = element_text(angle = 90),
-        strip.text.x = element_text(size = 8))
+  theme(axis.text.x = element_blank(),
+        legend.position = "bottom", legend.box = "horizontal") +
+  scale_color_discrete(NULL) + 
+  guides(colour = guide_legend(nrow = 1))
 
-# TODO: compute actual percentages
-# TODO: change caption of facet wrap
+ggsave("01_1.3_New Customers Originators.png", width = 8, height = 6, dpi = 600)
+
 
 # different channels as CONVERTER
 
 sdat_fact %>% 
   filter(Positionname == "CONVERTER") %>% 
-  group_by(Newcustomer, Groupname) %>% 
+  group_by(Newcustomer, Channel) %>% 
   count() %>% 
-  ggplot(aes(Groupname, n)) +
+  ggplot(aes(Channel, n, fill = Channel)) +
   geom_bar(stat = "identity") +
   geom_label(aes(label = n), vjust = -0.5) +
   facet_wrap(~Newcustomer, nrow = 2) +
-  coord_cartesian(ylim = c(0,600)) +
+  coord_cartesian(ylim = c(0,800)) +
   labs(x = "Channel",
        y = "Number of Touchpoints",
-       title = "Touchpoints per Channel, split by New and Old Customers",
-       subtitle = "Considerable more New Customers converted via CPM and Google Search - despite the difference in group affiliation",
+       title = "Deep-Dive Converter | Touchpoints per Channel, split by New and Old Customers",
+       subtitle = "Considerable more New Customers converted via Affiliate Marketing and Display Advertising",
        caption = "Source: W.M. Winters, May to June 2012") +
   theme_bw() +
-  theme(axis.text.x = element_text(angle = 90),
-        strip.text.x = element_text(size = 8))
+  theme(axis.text.x = element_blank(),
+        legend.position = "bottom", legend.box = "horizontal") +
+  scale_color_discrete(NULL) + 
+  guides(colour = guide_legend(nrow = 1))
+
+ggsave("01_1.3_New Customer Converters.png", width = 8, height = 6, dpi = 600)
 
 
-## PART II:
+
+## PART II: -----
 
 # channel name adjustment for channels
 
