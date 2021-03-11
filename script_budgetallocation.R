@@ -229,10 +229,27 @@ sdat_fact %>%
   annotate(geom = "label", x = 9.5, y = mean_conversion_time[[1,"mean_conversion_time"]] + 200, 
            label = round(mean_conversion_time[[1,"mean_conversion_time"]],1), colour = "#F8766D") +
   
-  facet_wrap(~Newcustomer) +
+  facet_wrap(~ Channel + Newcustomer) +
   labs(x = "Position",
        y = "Time to Convert [in hours]",
        title = "Difference in Conversion Times by Customer Type",
+       subtitle = "New Customers show significantly faster conversion times across all positions",
+       caption = "Source: W.M. Winters, May to June 2012") +
+  theme_bw() +
+  theme(legend.position = "bottom", legend.box = "horizontal") +
+  scale_color_discrete(NULL) + 
+  guides(colour = guide_legend(nrow = 1))
+
+
+# APPENDIX additional difference by channel
+sdat_fact %>% 
+  ggplot(aes(Position, TimeToConvert, fill = Newcustomer)) +
+  geom_boxplot(outlier.alpha = .1) +
+  
+  facet_wrap(~ Channel + Newcustomer) +
+  labs(x = "Position",
+       y = "Time to Convert [in hours]",
+       title = "Difference in Conversion Times by Customer Type and Channel",
        subtitle = "New Customers show significantly faster conversion times across all positions",
        caption = "Source: W.M. Winters, May to June 2012") +
   theme_bw() +
