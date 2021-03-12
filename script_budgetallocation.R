@@ -395,19 +395,34 @@ attribution_results <- sdat_fact %>%
   arrange(desc(even_attribution_sales)) %>% 
   left_join(attribution_results)
 
+
+# graph
+l1 <- c("Even Attribution", "First Click Attribution", "Last Click Attribution")
+names(l1) <- c("even_attribution_sales", "first_click_sales", "last_click_sales")
+
 attribution_results %>% 
   pivot_longer(cols = c(even_attribution_sales, last_click_sales, first_click_sales),
                names_to = "attribution",
-               values_to = "value") %>% 
-  ggplot(aes(Channel, value)) +
+               values_to = "value") %>%
+  mutate(value = round(value),1) %>% 
+  ggplot(aes(Channel, value, fill = Channel)) +
   geom_col() +
-  facet_wrap(~attribution, nrow = 3)
+  geom_label(aes(label = value), vjust = -.5) +
+  facet_wrap(~attribution, nrow = 3,
+             labeller = labeller(attribution = l1)) +
+  coord_cartesian(ylim = c(0,320000)) +
+  labs(x = "Channel",
+       y = "Sales",
+       title = "Comparison between Attribution Strategies",
+       subtitle = "Depending on the strategy, different channels in the customer journey are prioritized",
+       caption = "Source: W.M. Winters, May to June 2012") +
+  theme_bw() +
+  theme(axis.text.x = element_blank(),
+        legend.position = "bottom", legend.box = "horizontal") +
+  scale_color_discrete(NULL) + 
+  guides(colour = guide_legend(nrow = 1))
 
-
-# TODO: fix y axis
-# TODO: flip and make benchmarks easier
-# TODO: add legend, title, etc.
-
+ggsave("01_2.1_Comparison between Attribution Strategies.png", width = 8, height = 6, dpi = 600)
 
 # CASE FOR EVEN ATTRIBUTION MODEL
 # check relationship between revenue and channel
@@ -420,7 +435,7 @@ sdat_fact %>%
   ggplot(aes(Position, rev_share, colour = Channel)) +
   geom_point(alpha = .1) +
   geom_smooth() +
-  facet_wrap(~Channel) *+
+  facet_wrap(~Channel) +
   theme_bw()
 
 
@@ -430,10 +445,10 @@ sdat_fact %>%
   add_tally() %>% 
   mutate(rev_share = Saleamount/n) %>% 
   group_by(Channel) %>% 
-  ggplot(aes(rev_share, Position, fill = Channel)) +
+  ggplot(aes(Position, rev_share, fill = Channel)) +
   geom_violin() +
-  # labs(title = "",
-  #      subtitle = "Low") +
+  labs(title = "",
+       subtitle = "Low") +
   facet_wrap(~Channel) +
   theme_bw() +
   
@@ -444,28 +459,76 @@ sdat_fact %>%
 
 # TASK 2.2
 
+s1 <- sdat_fact %>% 
+  group_by(Orderid) %>% 
+  add_tally() %>% 
+  mutate(rev_share = Saleamount/n) %>% 
+  group_by(Channel, Positionname) %>% 
+  summarise(even_attribution_sales = sum(rev_share)) %>% 
+  arrange(desc(even_attribution_sales)) %>% 
+  mutate(even_attribution_sales = round(even_attribution_sales),1) %>% 
+  ggplot(aes(Channel, even_attribution_sales, fill = Channel)) +
+  geom_col() +
+  geom_label(aes(label = even_attribution_sales), vjust = -.5) +
+  facet_wrap(~Positionname, nrow = 4) +
+  coord_cartesian(ylim = c(0, 160000)) +
+  labs(x = "Channel",
+       y = "Sales",
+       title = "Even Attribution Model | Detailed View",
+       subtitle = "Depending on the strategy, different channels in the customer journey are prioritized",
+       caption = "Source: W.M. Winters, May to June 2012") +
+  theme_bw() +
+  theme(axis.text.x = element_blank(),
+        legend.position = "bottom", legend.box = "horizontal") +
+  scale_color_discrete(NULL) + 
+  guides(colour = guide_legend(nrow = 1))
+
+ggsave("01_2.2_Even Attribution Model - Detailed View.png", width = 8, height = 6, dpi = 600)
+
+
+
+
 # TASK 2.3: DEVELOP YOUR OWN ATTRIBUTION MODEL
 
-# regression ideas (skipped, does not work)
-to_model <- sdat_fact %>% 
-  select(Saleamount, Newcustomer, Position, Channel, TimeToConvert, Positionname)
-
-m1 <- glm(Saleamount ~ ., data = to_model)
-
 # position based attribution
-sdat_fact %>% 
+s2 <- sdat %>% 
+  # filter(!Channel %in% c("Uncategorized", NA, "Other")) %>% # does not work, sometimes negative values because of the share formula
   group_by(Orderid) %>% 
   add_tally() %>% 
   mutate(Position = Position + 1,
-         share = ifelse(Position == 1, 0.4,
-                        ifelse(Position == n, 0.4, 0.2/(n-2))),
-         rev_share = Saleamount * share) %>% 
+         # heuristic based on:
+         share = case_when(n == 2 ~ 0.5, # shares equal 50% if only 2 positions (min)
+                           Position == 1 ~ 0.4, # otherwise first position = 40%
+                           Position == n ~ 0.4, # and last position = 40%
+                           TRUE ~ 0.2/(n-2)), # rest shares 20%
+         rev_share = Saleamount * share)  %>% 
   
-  group_by(Channel) %>% 
+  group_by(Channel, Positionname) %>% 
   summarise(position_based_attribution = sum(rev_share)) %>% 
+  mutate(position_based_attribution = round(position_based_attribution,1)) %>% 
   arrange(desc(position_based_attribution)) %>% 
-  ggplot(aes(Channel, position_based_attribution)) +
-  geom_col()
+  ggplot(aes(Channel, position_based_attribution, fill = Channel)) +
+  geom_col() +
+  geom_label(aes(label = position_based_attribution), vjust = -.5) +
+  coord_cartesian(ylim = c(0, 160000)) +
+  # additionally one could include Newcustomer
+  facet_wrap(~Positionname, nrow = 4) +
+  
+  labs(x = "Channel",
+       y = "Sales",
+       title = "Position-Based Attribution Strategy | Detailed View",
+       subtitle = "Detailed view shows that PB shows a budget allocation in favor of both, converters and originators",
+       caption = "Source: W.M. Winters, May to June 2012") +
+  theme_bw() +
+  theme(axis.text.x = element_blank(),
+        legend.position = "bottom", legend.box = "horizontal") +
+  scale_color_discrete(NULL) + 
+  guides(colour = guide_legend(nrow = 1))
+
+s1 + s2
+
+ggsave("01_2.3_Position-Based Attribution Strategy.png", width = 8, height = 6, dpi = 600)
+
 
 # TASK 2.4
 # Same analysis as before split by type of customer
@@ -508,20 +571,40 @@ attribution_results_nc %>%
   facet_wrap(~attribution + Newcustomer, nrow = 3)
 
 # position based attribution ----
-sdat_fact %>% 
+sdat %>% 
   group_by(Orderid) %>% 
   add_tally() %>% 
   mutate(Position = Position + 1,
-         share = ifelse(Position == 1, 0.4,
-                        ifelse(Position == n, 0.4, 0.2/(n-2))),
-         rev_share = Saleamount * share) %>% 
+         # heuristic based on:
+         share = case_when(n == 2 ~ 0.5, # shares equal 50% if only 2 positions (min)
+                           Position == 1 ~ 0.4, # otherwise first position = 40%
+                           Position == n ~ 0.4, # and last position = 40%
+                           TRUE ~ 0.2/(n-2)), # rest shares 20%
+         rev_share = Saleamount * share)  %>% 
   
-  group_by(Channel, Newcustomer) %>% 
+  group_by(Channel, Positionname) %>% 
   summarise(position_based_attribution = sum(rev_share)) %>% 
   arrange(desc(position_based_attribution)) %>% 
-  ggplot(aes(Channel, position_based_attribution)) +
+  ggplot(aes(Channel, position_based_attribution, fill = Channel)) +
   geom_col() +
-  facet_wrap(~Newcustomer)
+  # additionally one could include Newcustomer
+  facet_wrap(~Positionname, nrow = 4) +
+  
+  labs(x = "Channel",
+       y = "Sales",
+       title = "Comparison between Attribution Strategies",
+       subtitle = "Depending on the strategy, different channels in the customer journey are prioritized",
+       caption = "Source: W.M. Winters, May to June 2012") +
+  theme_bw() +
+  theme(axis.text.x = element_blank(),
+        legend.position = "bottom", legend.box = "horizontal") +
+  scale_color_discrete(NULL) + 
+  guides(colour = guide_legend(nrow = 1))
+
+ggsave("01_2.4_Comparison between Attribution Strategies.png", width = 8, height = 6, dpi = 600)
+
+  
+  
 # weighting is different
 
 
