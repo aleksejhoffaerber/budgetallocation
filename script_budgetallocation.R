@@ -92,16 +92,20 @@ sdat_fact %>%
 sdat_fact %>% 
   ggplot(aes(Position)) +
   stat_density() +
-  facet_wrap(~Positionname)
+  facet_wrap(~Positionname) +
+  labs(x = "Position",
+       y = "Density",
+       title = "Distribution of Positions across Position Classifications",
+       subtitle = "Different position classification play a role across all positions",
+       caption = "Source: W.M. Winters, May to June 2012") +
+  theme_bw() +
+  theme(legend.position = "bottom", legend.box = "horizontal") +
+  scale_color_discrete(NULL) + 
+  guides(colour = guide_legend(nrow = 1))
 
-# positions classification analysis
-sdat_fact %>% 
-  group_by(Newcustomer, Positionname) %>% 
-  count() %>% 
-  ggplot(aes(Positionname, n)) +
-  geom_col() +
-  facet_wrap(~Newcustomer)
-  
+ggsave("01_00_Distribution of Positions across Position Classifications.png", width = 8, height = 3)
+
+
 
 # TASK 1.1 ------
 # old form including all channel
@@ -110,64 +114,34 @@ sdat_fact %>%
   count() %>%
   arrange(desc(n)) %>%
   ungroup() %>%
-  ggplot(aes(Positionname, n, fill = Positionname), colour = "white") +
+  ggplot(aes(Groupname, n, fill = Groupname), colour = "white") +
   geom_bar(stat = "identity") +
-  geom_label(aes(label = n), vjust = -0.3) +
-  facet_wrap(~Groupname, nrow = 3) +
+  geom_label(aes(label = n), vjust = -0.3, label.size = 0.05, label.r = unit(0.05, "lines")) +
+  facet_wrap(~Positionname, nrow = 3) +
   coord_cartesian(ylim = c(0,3500)) +
   labs(x = "Position",
        y = "Channel Touchpoints",
        title = "Touchpoints per Channel and Position",
        caption = "Source: W.M. Winters, May to June 2012") +
   theme_bw() +
-  theme(axis.text.x = element_text(angle = 90),
-        strip.text.x = element_text(size = 5))
+  theme(axis.text.x = element_blank(),
+        legend.position = "bottom", legend.box = "horizontal",
+        text = element_text(size = 8)) +
+  scale_color_discrete(NULL) + 
+  guides(colour = guide_legend(nrow = 1))
 
-# same graph but with channel classifications (more Overview)
-
-# TODO: size of labels,
-# TODO: size of facets
-# TODO. legend down
-# TODO: delete x axis labels
-
-sdat_fact %>% 
-  group_by(Positionname, Channel) %>% 
-  count() %>% 
-  arrange(desc(n)) %>% 
-  ungroup() %>% 
-  ggplot(aes(Positionname, n, fill = Positionname), colour = "white") +
-  geom_bar(stat = "identity") +
-  geom_label(aes(label = n), vjust = -0.3) +
-  facet_wrap(~Channel, nrow = 3) +
-  coord_cartesian(ylim = c(0,3500)) +
-  labs(x = "Position",
-       y = "Channel Touchpoints",
-       title = "Touchpoints per Channel and Position",
-       subtitle = "Search Engines provide strong support for initial clicks, \nAffiliate Marketing serves a strong role in converting \nDisplay Advertisements are also strong in click assistance and conversion",
-       caption = "Source: W.M. Winters, May to June 2012") +
-  theme_bw() +
-  theme(axis.text.x = element_text(angle = 90),
-        strip.text.x = element_text(size = 8))
-
-ggsave("01_1.1_Touchpoints per Channel and Position.png", width = 8, height = 6)
-
-
-
+ggsave("01_1.1_Touchpoints per Touchpoint Channel and Position.png", width = 12, height = 6)
 
 # TASK 1.2
-# TODO. adjust data model
-# TODO: different colors for close-up
-
 
 c1 <- sdat_fact %>% 
   filter(Positionname == "ORIGINATOR" | Positionname == "CONVERTER") %>% 
   ggplot(aes(TimeToConvert)) +
-  geom_histogram() +
-  facet_wrap(~Positionname, nrow = 2) +
+  geom_histogram(fill = "#F8766D") +
+  facet_wrap(~Positionname, nrow = 1) +
   labs(x = "Time for Conversion [in hours]",
        y = "Count",
-       title = "Conversion Time across Interval",
-       caption = "Source: W.M. Winters, May to June 2012") +
+       title = "Conversion Time across Interval") +
   theme_bw()
 
 # additionally split per hour
@@ -175,17 +149,17 @@ c2 <- sdat_fact %>%
   filter(Positionname == "ORIGINATOR" | Positionname == "CONVERTER") %>% 
   filter(TimeToConvert <= 24) %>% 
   ggplot(aes(TimeToConvert)) +
-  geom_histogram() +
-  facet_wrap(~Positionname, nrow = 2) +
+  geom_histogram(fill = "#00BFC4") +
+  facet_wrap(~Positionname, nrow = 1) +
   labs(x = "Time for Conversion [in first 24 hours]",
        y = "Count",
        title = "Close-Up Look for Conversions within first 24 hours",
        caption = "Source: W.M. Winters, May to June 2012") +
   theme_bw() 
 
-c1 + c2
+c1 / c2
 
-ggsave("01_1.2_Conversion Time Differences.png", width = 8, height = 6, dpi = 600)
+ggsave("01_1.2_Conversion Time Differences.png", width = 12, height = 8, dpi = 600)
 
 
 # amount of sales
@@ -194,22 +168,23 @@ sdat_fact %>%
   group_by(Positionname, Channel) %>% 
   summarise(sum_sales = sum(Saleamount)) %>% 
   arrange(desc(sum_sales)) %>% 
+  mutate(sum_sales = round(sum_sales),0) %>% 
   ggplot(aes(Channel, sum_sales, fill = Channel)) +
   geom_col() +
+  geom_label(aes(label = sum_sales), vjust = -.5) +
   facet_wrap(~Positionname, nrow = 2) +
+  coord_cartesian(ylim = c(0,380000)) +
   labs(x = "Channel",
        y = "Aggregated Sales",
        title = "Sales across different Channels and Positions",
        caption = "Source: W.M. Winters, May to June 2012") +
   theme_bw() +
-  # theme(axis.text.x = element_text(angle = 90),
-  #       strip.text.x = element_text(size = 8)) +
   theme(axis.text.x = element_blank(),
         legend.position = "bottom", legend.box = "horizontal") +
   scale_color_discrete(NULL) + 
   guides(colour = guide_legend(nrow = 1))
 
-ggsave("01_1.2_Sales across different Channels and Positions.png", width = 8, height = 6, dpi = 600)
+ggsave("01_1.2_Sales across different Channels and Positions.png", width = 12, height = 5, dpi = 600)
 
 
 
@@ -222,54 +197,8 @@ mean_conversion_time <- sdat_fact %>%
 
 sdat_fact %>% 
   group_by(Newcustomer, Channel) %>% 
-  summarise(mean_conversion_time = mean(TimeToConvert))
-
-# conversion time comparison
-sdat_fact %>% 
-  ggplot(aes(Position, TimeToConvert, fill = Newcustomer)) +
-  geom_boxplot(outlier.alpha = .1) +
+  summarise(mean_conversion_time = mean(TimeToConvert)) 
   
-  geom_hline(yintercept = mean_conversion_time[[2,"mean_conversion_time"]], 
-             linetype = "dashed", colour = "#00BFC4", size = 1) +
-  annotate(geom = "label", x = 9.5, y = mean_conversion_time[[2,"mean_conversion_time"]] + 200, 
-           label = round(mean_conversion_time[[2,"mean_conversion_time"]],1), colour = "#00BFC4") +
-  
-  geom_hline(yintercept = mean_conversion_time[[1,"mean_conversion_time"]], 
-             linetype = "dashed", colour = "#F8766D", size = 1) +
-  annotate(geom = "label", x = 9.5, y = mean_conversion_time[[1,"mean_conversion_time"]] + 200, 
-           label = round(mean_conversion_time[[1,"mean_conversion_time"]],1), colour = "#F8766D") +
-  
-  facet_wrap(~ Newcustomer) +
-  labs(x = "Position",
-       y = "Time to Convert [in hours]",
-       title = "Difference in Conversion Times by Customer Type",
-       subtitle = "New Customers show significantly faster conversion times across all positions",
-       caption = "Source: W.M. Winters, May to June 2012") +
-  theme_bw() +
-  theme(legend.position = "bottom", legend.box = "horizontal") +
-  scale_color_discrete(NULL) + 
-  guides(colour = guide_legend(nrow = 1))
-
-ggsave("01_1.3_Difference in Conversion Times by Customer Type.png", width = 8, height = 6, dpi = 600)
-
-
-
-# APPENDIX additional difference by channel
-sdat_fact %>% 
-  ggplot(aes(Position, TimeToConvert, fill = Newcustomer)) +
-  geom_boxplot(outlier.alpha = .1) +
-  
-  facet_wrap(~ Channel + Newcustomer) +
-  labs(x = "Position",
-       y = "Time to Convert [in hours]",
-       title = "Difference in Conversion Times by Customer Type and Channel",
-       subtitle = "New Customers show significantly faster conversion times across all positions",
-       caption = "Source: W.M. Winters, May to June 2012") +
-  theme_bw() +
-  theme(legend.position = "bottom", legend.box = "horizontal") +
-  scale_color_discrete(NULL) + 
-  guides(colour = guide_legend(nrow = 1))
-
 
 # spending behavior
 
@@ -279,36 +208,8 @@ mean_spending <- sdat_fact %>%
 
 sdat_fact %>% 
   group_by(Newcustomer, Channel) %>% 
-  summarise(mean_conversion_time = mean(Saleamount))
+  summarise(mean_sales = mean(Saleamount))
 
-
-# spending  comparison
-sdat_fact %>% 
-  ggplot(aes(Position, Saleamount, fill = Newcustomer)) +
-  geom_boxplot(outlier.alpha = .1) +
-  
-  geom_hline(yintercept = mean_spending[[2,"mean_spending"]],
-             linetype = "dashed", colour = "#00BFC4", size = 1) +
-  annotate(geom = "label", x = 9.5, y = mean_spending[[2,"mean_spending"]] + 100,
-           label = round(mean_spending[[2,"mean_spending"]],1), colour = "#00BFC4") +
-
-  geom_hline(yintercept = mean_spending[[1,"mean_spending"]],
-             linetype = "dashed", colour = "#F8766D", size = 1) +
-  annotate(geom = "label", x = 9.5, y = mean_spending[[1,"mean_spending"]] - 100,
-           label = round(mean_spending[[1,"mean_spending"]],1), colour = "#F8766D") +
-  
-  facet_wrap(~ Newcustomer) +
-  labs(x = "Position",
-       y = "Sales",
-       title = "Difference in Sales by Customer Type and Channel",
-       subtitle = "New Customers show significantly higher sales across all positions",
-       caption = "Source: W.M. Winters, May to June 2012") +
-  theme_bw() +
-  theme(legend.position = "bottom", legend.box = "horizontal") +
-  scale_color_discrete(NULL) + 
-  guides(colour = guide_legend(nrow = 1))
-
-ggsave("01_1.3_Difference in Sales by Customer Type and Channel.png", width = 8, height = 6, dpi = 600)
 
 
 
@@ -339,18 +240,18 @@ ggsave("01_1.3_New Customers Originators.png", width = 8, height = 6, dpi = 600)
 # different channels as CONVERTER
 
 sdat_fact %>% 
-  filter(Positionname == "CONVERTER") %>% 
-  group_by(Newcustomer, Channel) %>% 
+  filter(Positionname == "CONVERTER" | Positionname == "ORIGINATOR") %>% 
+  group_by(Newcustomer, Channel, Positionname) %>% 
   count() %>% 
   ggplot(aes(Channel, n, fill = Channel)) +
   geom_bar(stat = "identity") +
   geom_label(aes(label = n), vjust = -0.5) +
-  facet_wrap(~Newcustomer, nrow = 2) +
+  facet_wrap(~Newcustomer + Positionname, nrow = 2) +
   coord_cartesian(ylim = c(0,800)) +
   labs(x = "Channel",
        y = "Number of Touchpoints",
-       title = "Deep-Dive Converter | Touchpoints per Channel, split by New and Old Customers",
-       subtitle = "Considerable more New Customers converted via Affiliate Marketing and Display Advertising",
+       title = "Touchpoints per Channel, split by New and Old Customers",
+       subtitle = "Converters: Considerable more New Customers converted via Affiliate Marketing and Display Advertising \nOriginators: More New Customers originated from Display Advertising, Search Engines and Affilitate Marketing",
        caption = "Source: W.M. Winters, May to June 2012") +
   theme_bw() +
   theme(axis.text.x = element_blank(),
@@ -358,7 +259,7 @@ sdat_fact %>%
   scale_color_discrete(NULL) + 
   guides(colour = guide_legend(nrow = 1))
 
-ggsave("01_1.3_New Customer Converters.png", width = 8, height = 6, dpi = 600)
+ggsave("01_1.3_New Customer Converters and Originators.png", width = 12, height = 6, dpi = 600)
 
 
 
@@ -422,7 +323,7 @@ attribution_results %>%
   scale_color_discrete(NULL) + 
   guides(colour = guide_legend(nrow = 1))
 
-ggsave("01_2.1_Comparison between Attribution Strategies.png", width = 8, height = 6, dpi = 600)
+ggsave("01_2.1_Comparison between Attribution Strategies.png", width = 12, height = 6, dpi = 600)
 
 # CASE FOR EVEN ATTRIBUTION MODEL
 # check relationship between revenue and channel
@@ -457,7 +358,7 @@ sdat_fact %>%
   guides(colour = guide_legend(nrow = 1))
 
 
-# TASK 2.2
+# TASK 2.3: DEVELOP YOUR OWN ATTRIBUTION MODEL
 
 s1 <- sdat_fact %>% 
   group_by(Orderid) %>% 
@@ -478,17 +379,15 @@ s1 <- sdat_fact %>%
        subtitle = "Depending on the strategy, different channels in the customer journey are prioritized",
        caption = "Source: W.M. Winters, May to June 2012") +
   theme_bw() +
-  theme(axis.text.x = element_blank(),
-        legend.position = "bottom", legend.box = "horizontal") +
-  scale_color_discrete(NULL) + 
-  guides(colour = guide_legend(nrow = 1))
+  theme(legend.position = "none",
+        axis.text.x = element_blank())
+  # theme(axis.text.x = element_blank(),
+  #       legend.position = "bottom", legend.box = "horizontal") +
+  # scale_color_discrete(NULL) + 
+  # guides(colour = guide_legend(nrow = 1))
 
 ggsave("01_2.2_Even Attribution Model - Detailed View.png", width = 8, height = 6, dpi = 600)
 
-
-
-
-# TASK 2.3: DEVELOP YOUR OWN ATTRIBUTION MODEL
 
 # position based attribution
 s2 <- sdat %>% 
@@ -498,9 +397,9 @@ s2 <- sdat %>%
   mutate(Position = Position + 1,
          # heuristic based on:
          share = case_when(n == 2 ~ 0.5, # shares equal 50% if only 2 positions (min)
-                           Position == 1 ~ 0.4, # otherwise first position = 40%
-                           Position == n ~ 0.4, # and last position = 40%
-                           TRUE ~ 0.2/(n-2)), # rest shares 20%
+                           Position == 1 ~ 0.35, # otherwise first position = 35%
+                           Position == n ~ 0.35, # and last position = 35%
+                           TRUE ~ 0.3/(n-2)), # rest shares 30%
          rev_share = Saleamount * share)  %>% 
   
   group_by(Channel, Positionname) %>% 
@@ -519,81 +418,47 @@ s2 <- sdat %>%
        title = "Position-Based Attribution Strategy | Detailed View",
        subtitle = "Detailed view shows that PB shows a budget allocation in favor of both, converters and originators",
        caption = "Source: W.M. Winters, May to June 2012") +
-  theme_bw() +
+  theme_bw() 
+
+s1 + s2 +   
   theme(axis.text.x = element_blank(),
-        legend.position = "bottom", legend.box = "horizontal") +
+        legend.position = "right", legend.box = "horizontal") +
   scale_color_discrete(NULL) + 
   guides(colour = guide_legend(nrow = 1))
 
-s1 + s2
+ggsave("01_2.3_Attribution Strategy Comparison.png", width = 12, height = 6, dpi = 300)
 
-ggsave("01_2.3_Position-Based Attribution Strategy.png", width = 8, height = 6, dpi = 600)
+# TODO: make a full simulation of all k-values between 45 and 5
 
+k <- 0.35
 
-# TASK 2.4
-# Same analysis as before split by type of customer
-# FIRST CLICK ATTRIBUTION
-
-attribution_results_nc <- sdat_fact %>% 
-  filter(Position == 0) %>% 
-  group_by(Channel, Newcustomer) %>% 
-  summarise(first_click_sales = sum(Saleamount)) %>% 
-  arrange(desc(first_click_sales))
-
-# LAST CLICK ATTRIBUTION
-
-attribution_results_nc <- sdat_fact %>% 
-  group_by(Orderid) %>% 
-  arrange(desc(Orderid, Position)) %>%
-  slice(1) %>% 
-  group_by(Channel, Newcustomer) %>% 
-  summarise(last_click_sales = sum(Saleamount)) %>% 
-  arrange(desc(last_click_sales)) %>% 
-  left_join(attribution_results_nc)
-
-# EVEN ATTRIBUTION
-
-attribution_results_nc <- sdat_fact %>% 
-  group_by(Orderid) %>% 
-  add_tally() %>% 
-  mutate(rev_share = Saleamount/n) %>% 
-  group_by(Channel, Newcustomer) %>% 
-  summarise(even_attribution_sales = sum(rev_share)) %>% 
-  arrange(desc(even_attribution_sales)) %>% 
-  left_join(attribution_results_nc)
-
-attribution_results_nc %>% 
-  pivot_longer(cols = c(even_attribution_sales, last_click_sales, first_click_sales),
-               names_to = "attribution",
-               values_to = "value") %>% 
-  ggplot(aes(Channel, value)) +
-  geom_col() +
-  facet_wrap(~attribution + Newcustomer, nrow = 3)
-
-# position based attribution ----
 sdat %>% 
+  # filter(!Channel %in% c("Uncategorized", NA, "Other")) %>% # does not work, sometimes negative values because of the share formula
   group_by(Orderid) %>% 
   add_tally() %>% 
   mutate(Position = Position + 1,
          # heuristic based on:
          share = case_when(n == 2 ~ 0.5, # shares equal 50% if only 2 positions (min)
-                           Position == 1 ~ 0.4, # otherwise first position = 40%
-                           Position == n ~ 0.4, # and last position = 40%
-                           TRUE ~ 0.2/(n-2)), # rest shares 20%
+                           Position == 1 ~ k, # otherwise first position = 35%
+                           Position == n ~ k, # and last position = 35%
+                           TRUE ~ (1-2*k)/(n-2)), # rest shares 30%
          rev_share = Saleamount * share)  %>% 
   
-  group_by(Channel, Positionname) %>% 
+  group_by(Channel) %>% 
   summarise(position_based_attribution = sum(rev_share)) %>% 
+  mutate(position_based_attribution = round(position_based_attribution,1)) %>% 
   arrange(desc(position_based_attribution)) %>% 
   ggplot(aes(Channel, position_based_attribution, fill = Channel)) +
   geom_col() +
+  geom_label(aes(label = position_based_attribution), vjust = -.5) +
+  coord_cartesian(ylim = c(0, 300000)) +
   # additionally one could include Newcustomer
-  facet_wrap(~Positionname, nrow = 4) +
+  # facet_wrap(~Positionname, nrow = 4) +
   
   labs(x = "Channel",
        y = "Sales",
-       title = "Comparison between Attribution Strategies",
-       subtitle = "Depending on the strategy, different channels in the customer journey are prioritized",
+       title = "Position-Based Attribution Strategy | Detailed View",
+       subtitle = "Detailed view shows that PB shows a budget allocation in favor of both, converters and originators",
        caption = "Source: W.M. Winters, May to June 2012") +
   theme_bw() +
   theme(axis.text.x = element_blank(),
@@ -601,11 +466,183 @@ sdat %>%
   scale_color_discrete(NULL) + 
   guides(colour = guide_legend(nrow = 1))
 
-ggsave("01_2.4_Comparison between Attribution Strategies.png", width = 8, height = 6, dpi = 600)
 
+
+
+# TASK 2.4
+# Same analysis as before split by type of customer
+
+sdat_fact %>% 
+  group_by(Newcustomer, Positionname, Channel) %>% 
+  count() %>% 
+  ggplot(aes(Channel, n, fill = Channel)) +
+  geom_col() +
+  facet_wrap(~Positionname + Newcustomer, nrow = 2) +
+  labs(x = "Position Classification",
+       y = "Number of Touchpoints",
+       title = "Difference in Touchpoint Attribution by Type of Customer",
+       subtitle = "Dataset includes more new customers than existing customers, which illustrated by the different channels",
+       caption = "Source: W.M. Winters, May to June 2012") +
+  theme_bw() +
+  theme(axis.text.x = element_blank(),
+        legend.position = "bottom", legend.box = "horizontal") +
+  scale_color_discrete(NULL) + 
+  guides(colour = guide_legend(nrow = 1))
+
+sdat_fact %>% 
+  group_by(Newcustomer, Position, Channel) %>% 
+  count() %>% 
+  ggplot(aes(Position, n, fill = Channel)) +
+  geom_col() +
+  facet_wrap(~Channel + Newcustomer, nrow = 2) +
+  labs(x = "Position",
+       y = "Occurences",
+       title = "Occurence of Positions between Type of Customers and Channel",
+       subtitle = "New customers have a similar position distribution, channel prioritization can be kept",
+       caption = "Source: W.M. Winters, May to June 2012") +
+  theme_bw() +
+  theme(legend.position = "bottom", legend.box = "horizontal") +
+  scale_color_discrete(NULL) + 
+  guides(colour = guide_legend(nrow = 1))
+
+ggsave("01_2.4_Position Comparison between Channels and Type of Customers.png", width = 12, height = 6, dpi = 300)
+
+
+# TASK 2.5. BUDGET ALLOCATION
+
+budgetallocation <- sdat %>% 
+  # filter(!Channel %in% c("Uncategorized", NA, "Other")) %>% # does not work, sometimes negative values because of the share formula
+  group_by(Orderid) %>% 
+  add_tally() %>% 
+  mutate(Position = Position + 1,
+         # heuristic based on:
+         share = case_when(n == 2 ~ 0.5, # shares equal 50% if only 2 positions (min)
+                           Position == 1 ~ k, # otherwise first position = 35%
+                           Position == n ~ k, # and last position = 35%
+                           TRUE ~ (1-2*k)/(n-2)), # rest shares 30%
+         rev_share = Saleamount * share)  %>% 
   
+  group_by(Channel) %>% 
+  summarise(position_based_attribution = sum(rev_share)) %>% 
+  mutate(position_based_attribution = round(position_based_attribution,1)) %>% 
+  arrange(desc(position_based_attribution)) %>% 
   
-# weighting is different
+  mutate(share = round((position_based_attribution / sum(position_based_attribution))*100,2))
+
+budgetallocation_adj <- budgetallocation %>% 
+  filter(Channel %in% c("Display Advertising", "Affiliate Marketing", "Search Engine")) %>% 
+  mutate(share_adj = share + (share / (45.04+32.23+19.99)) * (1.69+0.98+0.07))
 
 
-            
+# APPENDIX:
+
+# Appendix 1:
+
+sdat_fact %>% 
+  group_by(Positionname, Channel) %>% 
+  count() %>% 
+  arrange(desc(n)) %>% 
+  ungroup() %>% 
+  group_by(Positionname) %>% 
+  mutate(share = round(((n / sum(n)) * 100),2)) %>% 
+  
+  ggplot(aes(Channel, share, fill = Channel), colour = "white") +
+  geom_bar(stat = "identity") +
+  geom_label(aes(label = share), vjust = -0.3) +
+  facet_wrap(~Positionname, nrow = 3) +
+  coord_cartesian(ylim = c(0,100)) +
+  labs(x = "Position",
+       y = "Channel Touchpoints [in percent]",
+       title = "Touchpoints per Channel and Position [in percent]",
+       subtitle = "Search Engines provide strong support for initial clicks, \nAffiliate Marketing serves a strong role in converting and rosting (retargeting) \nDisplay Advertisements are strong across all categories",
+       caption = "Source: W.M. Winters, May to June 2012") +
+  theme_bw() +
+  theme(axis.text.x = element_blank(),
+        legend.position = "bottom", legend.box = "horizontal") +
+  scale_color_discrete(NULL) + 
+  guides(colour = guide_legend(nrow = 1))
+
+
+ggsave("01_A1_Touchpoints per Channel and Position in percent.png", width = 12, height = 6)
+
+
+# Appendix 2: 
+
+# conversion time comparison
+sdat_fact %>% 
+  ggplot(aes(Position, TimeToConvert, fill = Newcustomer)) + 
+  geom_boxplot(outlier.alpha = .1) +
+  
+  geom_hline(yintercept = mean_conversion_time[[2,"mean_conversion_time"]], 
+             linetype = "dashed", colour = "#00BFC4", size = 1) +
+  annotate(geom = "label", x = 9.5, y = mean_conversion_time[[2,"mean_conversion_time"]] + 200, 
+           label = round(mean_conversion_time[[2,"mean_conversion_time"]],1), colour = "#00BFC4") +
+  
+  geom_hline(yintercept = mean_conversion_time[[1,"mean_conversion_time"]], 
+             linetype = "dashed", colour = "#F8766D", size = 1) +
+  annotate(geom = "label", x = 9.5, y = mean_conversion_time[[1,"mean_conversion_time"]] + 200, 
+           label = round(mean_conversion_time[[1,"mean_conversion_time"]],1), colour = "#F8766D") +
+  
+  facet_wrap(~ Newcustomer) +
+  labs(x = "Position",
+       y = "Time to Convert [in hours]",
+       title = "Difference in Conversion Times by Customer Type",
+       subtitle = "New Customers show significantly faster conversion times across all positions",
+       caption = "Source: W.M. Winters, May to June 2012") +
+  theme_bw() +
+  theme(legend.position = "bottom", legend.box = "horizontal") +
+  scale_color_discrete(NULL) + 
+  guides(colour = guide_legend(nrow = 1))
+
+ggsave("01_A2_Difference in Conversion Times by Customer Type.png", width = 12, height = 4, dpi = 600)
+
+
+# Appendix 3:
+
+# spending  comparison
+sdat_fact %>% 
+  ggplot(aes(Position, Saleamount, fill = Newcustomer)) +
+  geom_boxplot(outlier.alpha = .1) +
+  
+  geom_hline(yintercept = mean_spending[[2,"mean_spending"]],
+             linetype = "dashed", colour = "#00BFC4", size = 1) +
+  annotate(geom = "label", x = 9.5, y = mean_spending[[2,"mean_spending"]] + 100,
+           label = round(mean_spending[[2,"mean_spending"]],1), colour = "#00BFC4") +
+  
+  geom_hline(yintercept = mean_spending[[1,"mean_spending"]],
+             linetype = "dashed", colour = "#F8766D", size = 1) +
+  annotate(geom = "label", x = 9.5, y = mean_spending[[1,"mean_spending"]] - 100,
+           label = round(mean_spending[[1,"mean_spending"]],1), colour = "#F8766D") +
+  
+  facet_wrap(~ Newcustomer) +
+  labs(x = "Position",
+       y = "Sales",
+       title = "Difference in Sales by Customer Type and Channel",
+       subtitle = "New Customers show significantly higher sales across all positions",
+       caption = "Source: W.M. Winters, May to June 2012") +
+  theme_bw() +
+  theme(legend.position = "bottom", legend.box = "horizontal") +
+  scale_color_discrete(NULL) + 
+  guides(colour = guide_legend(nrow = 1))
+
+ggsave("01_A3_Difference in Sales by Customer Type and Channel.png", width = 12, height = 4, dpi = 600)
+
+
+# Appendix 4: 
+# APPENDIX additional difference by channel
+sdat_fact %>% 
+  ggplot(aes(Position, TimeToConvert, fill = Newcustomer)) +
+  geom_boxplot(outlier.alpha = .1) +
+  
+  facet_wrap(~ Channel + Newcustomer) +
+  labs(x = "Position",
+       y = "Time to Convert [in hours]",
+       title = "Difference in Conversion Times by Customer Type and Channel",
+       subtitle = "New Customers show significantly faster conversion times across all positions",
+       caption = "Source: W.M. Winters, May to June 2012") +
+  theme_bw() +
+  theme(legend.position = "bottom", legend.box = "horizontal") +
+  scale_color_discrete(NULL) + 
+  guides(colour = guide_legend(nrow = 1))
+
+ggsave("01_A4_Difference in Conversion Times by Customer Type and Channel.png", width = 12, height = 10, dpi = 600)
