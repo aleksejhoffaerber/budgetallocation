@@ -433,7 +433,6 @@ ggsave("01_2.3_Attribution Strategy Comparison.png", width = 12, height = 6, dpi
 k <- 0.35
 
 sdat %>% 
-  # filter(!Channel %in% c("Uncategorized", NA, "Other")) %>% # does not work, sometimes negative values because of the share formula
   group_by(Orderid) %>% 
   add_tally() %>% 
   mutate(Position = Position + 1,
