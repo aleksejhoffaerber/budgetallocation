@@ -2,6 +2,7 @@
 library(xlsx) # excel import
 library(dplyr) # data data preprocessing and data wrangling
 library(corrr) # simple correlation analysis
+library(scales) # adjustable axes
 library(tsibble) # dealing with time-series tibbles
 library(ggplot2) # general plotting
 library(patchwork) # side-by-side plotting
@@ -449,11 +450,11 @@ sdat %>%
   arrange(desc(position_based_attribution)) %>% 
   ggplot(aes(Channel, position_based_attribution, fill = Channel)) +
   geom_col() +
-  geom_label(aes(label = position_based_attribution), vjust = -.5) +
+  geom_label(aes(label = dollar(position_based_attribution, suffix = "k", scale = 1/1000)), vjust = -.5, show.legend = F) +
   coord_cartesian(ylim = c(0, 300000)) +
   # additionally one could include Newcustomer
   # facet_wrap(~Positionname, nrow = 4) +
-  
+  scale_y_continuous(labels = dollar) +
   labs(x = "Channel",
        y = "Sales",
        title = "Position-Based Attribution Strategy | Detailed View",
