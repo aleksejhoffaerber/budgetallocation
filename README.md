@@ -18,8 +18,8 @@ What makes this project interesting
 
 Samples from the Analysis 
 -------------------
-
-![Touchpoints per Channel and Position Class](plots/01_A1_Touchpoints per Channel and Position in percent.png)
+Touchpoints per Channel and Position Class
+![](plots/01_A1_Touchpoints per Channel and Position in percent.png)
 
 ![Sales across Channels and Position Class](plots/01_1.2_Sales across different Channels and Positions.png)
 
