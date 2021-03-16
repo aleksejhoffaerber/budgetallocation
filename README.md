@@ -18,13 +18,13 @@ What makes this project interesting
 
 Samples from the Analysis 
 -------------------
-Touchpoints per Channel and Position Class
-![](plots/01_A1_Touchpoints per Channel and Position in percent.png)
 
-![Sales across Channels and Position Class](plots/01_1.2_Sales across different Channels and Positions.png)
+![](https://github.com/aleksejhoffaerber/budgetallocation/blob/a29eb0d6d7d65cf7483f5e2c264ba191873d8a11/plots/01_A1_Touchpoints%20per%20Channel%20and%20Position%20in%20percent.png)
 
-![Weight Optimization of Position-Based Attribution Model](plots/01_A5_Attribution Optimization.png)
+![](https://github.com/aleksejhoffaerber/budgetallocation/blob/a29eb0d6d7d65cf7483f5e2c264ba191873d8a11/plots/01_1.2_Sales%20across%20different%20Channels%20and%20Positions.png)
 
-![Weight Comparison between Attribution Models](plots/01_2.3_Attribution Strategy Comparison.png)
+![](https://github.com/aleksejhoffaerber/budgetallocation/blob/a29eb0d6d7d65cf7483f5e2c264ba191873d8a11/plots/01_A5_Attribution%20Optimization.png)
 
-![DIfference in Conversion Times for Different Customers](plots/01_A4_Difference in Conversion Times by Customer Type and Channel.png)
+![](https://github.com/aleksejhoffaerber/budgetallocation/blob/a29eb0d6d7d65cf7483f5e2c264ba191873d8a11/plots/01_2.3_Attribution%20Strategy%20Comparison.png)
+
+![](https://github.com/aleksejhoffaerber/budgetallocation/blob/a29eb0d6d7d65cf7483f5e2c264ba191873d8a11/plots/01_A4_Difference%20in%20Conversion%20Times%20by%20Customer%20Type%20and%20Channel.png)
